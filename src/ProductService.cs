@@ -11,7 +11,7 @@ namespace restlessmedia.Module.Product
 {
   public class ProductService : IProductService
   {
-    internal ProductService(IFileService fileService, IMetaService metaService, IProductDataProvider productDataProvider, ICheckoutProvider checkoutProvider, ISecurityService securityService)
+    public ProductService(IFileService fileService, IMetaService metaService, IProductDataProvider productDataProvider, ICheckoutProvider checkoutProvider, ISecurityService securityService)
     {
       _fileService = fileService ?? throw new ArgumentNullException(nameof(fileService));
       _metaService = metaService ?? throw new ArgumentNullException(nameof(metaService));
