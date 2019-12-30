@@ -80,7 +80,7 @@ namespace restlessmedia.Module.Product.Data
 
     public ProductEntity Read(int productId)
     {
-      using (IGridReader reader = QueryMultiple("dbo.SPReadProduct", new { productId }))
+      using (IGridReader reader = QueryMultiple("dbo.SPReadProduct", new { productId }, onExecute: connection => LicenseHelper.SetContext(connection, DataContext.LicenseSettings)))
       {
         ProductEntity product = reader.Read<ProductEntity, ProductOptionEntity, ProductDetailEntity, CategoryEntity, FileEntity, ProductEntity>((p, o, d, c, f) => { p.MinOption = o; p.MinOption.Detail = d; p.Category = c; p.Thumb = f; return p; }, splitOn: "ProductOptionId,ProductDetailId,CategoryId,FileId").SingleOrDefault();
         product.Options = new ModelCollection<ProductOptionEntity>(reader.Read<ProductOptionEntity, ProductDetailEntity, ProductOptionEntity>((o, d) => { o.Detail = d; return o; }, splitOn: "ProductDetailId"));
