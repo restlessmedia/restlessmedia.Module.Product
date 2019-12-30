@@ -33,7 +33,7 @@ Global
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		EnterpriseLibraryConfigurationToolBinariesPathV6 = ommon.6.0.1304.0\lib\NET45;ransientFaultHandling.6.0.1304.0\lib\portable-net45+win+wp8
 		SolutionGuid = {7F9B60C1-611F-498F-9AA2-C3DAE1412573}
+		EnterpriseLibraryConfigurationToolBinariesPathV6 = ommon.6.0.1304.0\lib\NET45;ransientFaultHandling.6.0.1304.0\lib\portable-net45+win+wp8;packages\EnterpriseLibrary.TransientFaultHandling.6.0.1304.0\lib\portable-net45+win+wp8;packages\EnterpriseLibrary.Common.6.0.1304.0\lib\NET45
 	EndGlobalSection
 EndGlobal

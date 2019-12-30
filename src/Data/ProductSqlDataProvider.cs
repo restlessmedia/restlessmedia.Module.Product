@@ -11,39 +11,44 @@ using restlessmedia.Module.File;
 using restlessmedia.Module.Address;
 using restlessmedia.Module.Meta;
 using restlessmedia.Module.Category;
+using SqlBuilder;
+using FastMapper;
 
 namespace restlessmedia.Module.Product.Data
 {
   internal class ProductSqlDataProvider : SqlDataProviderBase
   {
-    internal ProductSqlDataProvider(IDataContext context)
-      : base(context) { }
+    internal ProductSqlDataProvider(IDataContext context, IModelDataService<DataModel.VProduct> modelDataService)
+      : base(context)
+    {
+      _modelDataService = modelDataService ?? throw new ArgumentNullException(nameof(modelDataService));
+    }
 
     public void UpdateSaleOrderNumber(int saleId, string orderNumber)
     {
-      Execute("dbo.SPUpdateSaleOrderNumber", new { saleId = saleId, orderNumber = orderNumber });
+      Execute("dbo.SPUpdateSaleOrderNumber", new { saleId, orderNumber });
     }
 
     public decimal ChargeAmount(SaleEntity sale, decimal amount)
     {
-      return QueryWithTransaction<decimal>("dbo.SPChargeAmount", new { saleId = sale.SaleId, amount = amount }).First();
+      return QueryWithTransaction<decimal>("dbo.SPChargeAmount", new { saleId = sale.SaleId, amount }).First();
     }
 
     public SaleFlags GetSaleFlags(int saleId)
     {
-      IEnumerable<SaleFlags> result = Query<SaleFlags>("dbo.SPGetSaleFlags", new { saleId = saleId });
+      IEnumerable<SaleFlags> result = Query<SaleFlags>("dbo.SPGetSaleFlags", new { saleId });
       return result.Any() ? result.First() : SaleFlags.None;
     }
 
     public SaleFlags SetSaleFlags(int saleId, SaleFlags flags)
     {
-      IEnumerable<SaleFlags> result = QueryWithTransaction<SaleFlags>("dbo.SPSetSaleFlags", new { saleId = saleId, flags = (int)flags });
+      IEnumerable<SaleFlags> result = QueryWithTransaction<SaleFlags>("dbo.SPSetSaleFlags", new { saleId, flags = (int)flags });
       return result.Any() ? result.First() : SaleFlags.None;
     }
 
     public void UpdateSaleFlags(int saleId, SaleFlags flags)
     {
-      Execute("dbo.SPUpdateSaleFlags", new { saleId = saleId, flags = (int)flags });
+      Execute("dbo.SPUpdateSaleFlags", new { saleId, flags = (int)flags });
     }
 
     public void Update(ProductOptionEntity option)
@@ -70,12 +75,12 @@ namespace restlessmedia.Module.Product.Data
 
     public void Delete(int productId)
     {
-      Execute("dbo.SPDeleteProduct", new { productId = productId });
+      Execute("dbo.SPDeleteProduct", new { productId });
     }
 
     public ProductEntity Read(int productId)
     {
-      using (IGridReader reader = QueryMultiple("dbo.SPReadProduct", new { productId = productId }))
+      using (IGridReader reader = QueryMultiple("dbo.SPReadProduct", new { productId }))
       {
         ProductEntity product = reader.Read<ProductEntity, ProductOptionEntity, ProductDetailEntity, CategoryEntity, FileEntity, ProductEntity>((p, o, d, c, f) => { p.MinOption = o; p.MinOption.Detail = d; p.Category = c; p.Thumb = f; return p; }, splitOn: "ProductOptionId,ProductDetailId,CategoryId,FileId").SingleOrDefault();
         product.Options = new ModelCollection<ProductOptionEntity>(reader.Read<ProductOptionEntity, ProductDetailEntity, ProductOptionEntity>((o, d) => { o.Detail = d; return o; }, splitOn: "ProductDetailId"));
@@ -119,12 +124,12 @@ namespace restlessmedia.Module.Product.Data
 
     public SaleEntity ReadSale(int saleId)
     {
-      return ReadSaleInternal("dbo.SPReadSale", new { saleId = saleId });
+      return ReadSaleInternal("dbo.SPReadSale", new { saleId });
     }
 
     public SaleEntity ReadSale(string orderNumber)
     {
-      return ReadSaleInternal("dbo.SPReadSaleFromOrderNumber", new { orderNumber = orderNumber });
+      return ReadSaleInternal("dbo.SPReadSaleFromOrderNumber", new { orderNumber });
     }
 
     public SaleEntity FindSale(string query)
@@ -141,7 +146,7 @@ namespace restlessmedia.Module.Product.Data
     {
       return Query((connection) =>
       {
-        IEnumerable<SaleEntity> result = connection.Query<SaleEntity>("dbo.SPListSales", new { page = page, maxPerPage = maxPerPage }, commandType: CommandType.StoredProcedure);
+        IEnumerable<SaleEntity> result = connection.Query<SaleEntity>("dbo.SPListSales", new { page, maxPerPage }, commandType: CommandType.StoredProcedure);
         int totalCount = connection.Query<int>("dbo.SPListSales_Count").First();
         return new ModelCollection<SaleEntity>(result, totalCount);
       });
@@ -149,12 +154,38 @@ namespace restlessmedia.Module.Product.Data
 
     public ModelCollection<SaleEntity> ListUserSales(Guid userKey)
     {
-      return ModelQuery<SaleEntity>("dbo.SPListUserSales", new { userKey = userKey });
+      return ModelQuery<SaleEntity>("dbo.SPListUserSales", new { userKey });
     }
 
     public ModelCollection<ProductEntityBase> ListProducts(int categoryId, ProductFlagTypes flags, ProductOrder order)
     {
-      return ListProductsInternal("dbo.SPListProductsByCategory", new { categoryId = categoryId, productFlags = (byte)flags, order = (byte)order });
+      /*
+      Select<DataModel.VProduct> select = _modelDataService.DataProvider.NewSelect();
+      select
+        .Where(x => x.CategoryId, categoryId)
+        .And(x => x.ProductFlags, flags);
+
+      select
+        .Join("INNER JOIN dbo.TEntityCategory C ON C.EntityGuid = P.EntityGuid");
+
+      if (order == ProductOrder.CostAsc)
+      {
+        select.OrderBy(x => x.Net);
+      }
+      else if (order == ProductOrder.CostDesc)
+      {
+        select.OrderBy(x => x.Net, false);
+      }
+      else if (order == ProductOrder.TitleAsc)
+      {
+        select.OrderBy(x => x.Title);
+      }
+
+      DataPage<dynamic> dataPage = _modelDataService.DataProvider.QueryPage<dynamic>(select, connection => select.WithLicenseId(connection, DataContext.LicenseSettings));
+      return new ModelCollection<ProductEntityBase>(ObjectMapper.MapAll<ProductEntityBase>(dataPage.Data), dataPage.Count);
+      */
+
+      return ListProductsInternal("dbo.SPListProductsByCategory", new { categoryId, productFlags = (byte)flags, order = (byte)order });
     }
 
     public ModelCollection<ProductEntityBase> ListProducts(ProductFlagTypes flags)
@@ -169,12 +200,12 @@ namespace restlessmedia.Module.Product.Data
 
     public BasketProduct ReadBasketProduct(int productDetailId)
     {
-      return Query<BasketProduct>("dbo.SPBasketProduct", new { productDetailId = productDetailId }).FirstOrDefault();
+      return Query<BasketProduct>("dbo.SPBasketProduct", new { productDetailId }).FirstOrDefault();
     }
 
     public int CreateSale(Guid userKey, SaleFlags flags, decimal taxRate, string saleCode, int? shippingId)
     {
-      return QueryWithTransaction<int>("dbo.SPCreateSale", new { flags = (int)flags, taxRate = taxRate, saleCode = saleCode, userKey = userKey, shippingId = shippingId }).First();
+      return QueryWithTransaction<int>("dbo.SPCreateSale", new { flags = (int)flags, taxRate, saleCode, userKey, shippingId }).First();
     }
 
     public SaleEntity CreateAndReturnSale(Guid userKey, SaleFlags flags, decimal taxRate, string saleCode, int? shippingId)
@@ -185,7 +216,7 @@ namespace restlessmedia.Module.Product.Data
 
     public void AddFlag(int saleId, SaleFlags flag)
     {
-      Execute("dbo.SPSaleAddFlag", new { saleId = saleId, flag = (int)flag });
+      Execute("dbo.SPSaleAddFlag", new { saleId, flag = (int)flag });
     }
 
     public void SaveBasket(Guid userKey, IEnumerable<IBasketProduct> items)
@@ -196,7 +227,7 @@ namespace restlessmedia.Module.Product.Data
 
         foreach (BasketProduct product in items)
         {
-          transaction.Connection.Execute("dbo.SPAddToBasket", new { productDetailId = product.ProductDetailId, qty = product.Qty, userKey = userKey }, transaction: transaction, commandType: CommandType.StoredProcedure);
+          transaction.Connection.Execute("dbo.SPAddToBasket", new { productDetailId = product.ProductDetailId, qty = product.Qty, userKey }, transaction: transaction, commandType: CommandType.StoredProcedure);
         }
       });
     }
@@ -254,6 +285,8 @@ namespace restlessmedia.Module.Product.Data
     {
       return Query((connection) =>
       {
+        LicenseHelper.SetContext(connection, DataContext.LicenseSettings);
+
         return new ModelCollection<ProductEntityBase>(connection.Query<ProductEntity, ProductOptionEntity, ProductDetailEntity, FileEntity, ProductEntity>(command, (p, o, d, f) =>
         {
           p.MinOption = o;
@@ -266,7 +299,9 @@ namespace restlessmedia.Module.Product.Data
 
     private void ClearBasket(IDbTransaction transaction, Guid userKey)
     {
-      transaction.Connection.Execute("dbo.SPClearBasket", new { userKey = userKey }, transaction: transaction, commandType: CommandType.StoredProcedure);
+      transaction.Connection.Execute("dbo.SPClearBasket", new { userKey }, transaction: transaction, commandType: CommandType.StoredProcedure);
     }
+
+    private readonly IModelDataService<DataModel.VProduct> _modelDataService;
   }
 }
