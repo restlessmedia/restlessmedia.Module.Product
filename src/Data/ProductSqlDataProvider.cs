@@ -82,10 +82,16 @@ namespace restlessmedia.Module.Product.Data
     {
       using (IGridReader reader = QueryMultiple("dbo.SPReadProduct", new { productId }, onExecute: connection => LicenseHelper.SetContext(connection, DataContext.LicenseSettings)))
       {
-        ProductEntity product = reader.Read<ProductEntity, ProductOptionEntity, ProductDetailEntity, CategoryEntity, FileEntity, ProductEntity>((p, o, d, c, f) => { p.MinOption = o; p.MinOption.Detail = d; p.Category = c; p.Thumb = f; return p; }, splitOn: "ProductOptionId,ProductDetailId,CategoryId,FileId").SingleOrDefault();
-        product.Options = new ModelCollection<ProductOptionEntity>(reader.Read<ProductOptionEntity, ProductDetailEntity, ProductOptionEntity>((o, d) => { o.Detail = d; return o; }, splitOn: "ProductDetailId"));
-        product.MetaData = new MetaCollection(reader.Read<MetaEntity>());
-        product.Files = new ModelCollection<FileEntity>(reader.Read<FileEntity>());
+        ProductEntity product = reader.Read<ProductEntity, ProductOptionEntity, ProductDetailEntity, CategoryEntity, FileEntity, ProductEntity>((p, o, d, c, f) => { p.MinOption = o; p.MinOption.Detail = d; p.Category = c; p.Thumb = f; return p; }, splitOn: "ProductOptionId,ProductDetailId,CategoryId,FileId")
+          .SingleOrDefault();
+
+        if (product != null)
+        {
+          product.Options = new ModelCollection<ProductOptionEntity>(reader.Read<ProductOptionEntity, ProductDetailEntity, ProductOptionEntity>((o, d) => { o.Detail = d; return o; }, splitOn: "ProductDetailId"));
+          product.MetaData = new MetaCollection(reader.Read<MetaEntity>());
+          product.Files = new ModelCollection<FileEntity>(reader.Read<FileEntity>());
+        }
+
         return product;
       }
     }
