@@ -9,7 +9,7 @@ using restlessmedia.Module.Security;
 
 namespace restlessmedia.Module.Product
 {
-  public class ProductService : IProductService
+  internal class ProductService : IProductService
   {
     public ProductService(IFileService fileService, IMetaService metaService, IProductDataProvider productDataProvider, ICheckoutProvider checkoutProvider, ISecurityService securityService)
     {

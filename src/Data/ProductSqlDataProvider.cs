@@ -11,8 +11,6 @@ using restlessmedia.Module.File;
 using restlessmedia.Module.Address;
 using restlessmedia.Module.Meta;
 using restlessmedia.Module.Category;
-using SqlBuilder;
-using FastMapper;
 
 namespace restlessmedia.Module.Product.Data
 {

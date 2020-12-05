@@ -6,7 +6,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace restlessmedia.Module.Product.Data.DataModel
 {
   [Table("_VProduct", Schema = "dbo")]
-  public class VProduct : DataModel<VProduct, ProductEntity>
+  internal class VProduct : DataModel<VProduct, ProductEntity>
   {
     [Key]
     public int ProductId { get; set; }
